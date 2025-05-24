@@ -3,20 +3,23 @@ import checker from 'vite-plugin-checker';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react-swc';
 
-// ----------------------------------------------------------------------
-
 const PORT = 3039;
+const DISABLE_ESLINT = process.env.VITE_DISABLE_ESLINT === 'true';
 
 export default defineConfig({
   plugins: [
     react(),
     checker({
       typescript: true,
-      eslint: {
-        useFlatConfig: true,
-        lintCommand: 'eslint "./src/**/*.{js,jsx,ts,tsx}"',
-        dev: { logLevel: ['error'] },
-      },
+      ...(DISABLE_ESLINT
+        ? {}
+        : {
+            eslint: {
+              useFlatConfig: true,
+              lintCommand: 'eslint "./src/**/*.{js,jsx,ts,tsx}"',
+              dev: { logLevel: ['error'] },
+            },
+          }),
       overlay: {
         position: 'tl',
         initialIsOpen: false,
