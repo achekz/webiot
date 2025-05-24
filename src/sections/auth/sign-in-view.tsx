@@ -1,27 +1,29 @@
-import type { FormEvent } from 'react';
+import { FormEvent, useEffect, useState } from 'react';
 
-import { useState } from 'react';
-
-import Box from '@mui/material/Box';
-import Card from '@mui/material/Card';
-import Link from '@mui/material/Link';
-import Alert from '@mui/material/Alert';
-import Button from '@mui/material/Button';
-import Divider from '@mui/material/Divider';
-import TextField from '@mui/material/TextField';
-import IconButton from '@mui/material/IconButton';
-import Typography from '@mui/material/Typography';
-import CardContent from '@mui/material/CardContent';
-import InputAdornment from '@mui/material/InputAdornment';
-import CircularProgress from '@mui/material/CircularProgress';
+import { Visibility, VisibilityOff, School } from '@mui/icons-material';
+import {
+  Box,
+  Card,
+  Link,
+  Alert,
+  Button,
+  Divider,
+  TextField,
+  IconButton,
+  Typography,
+  CardContent,
+  InputAdornment,
+  CircularProgress,
+  FormControlLabel,
+  Checkbox,
+} from '@mui/material';
 
 import { useRouter } from 'src/routes/hooks';
 
 import { useAuth } from 'src/context/AuthContext';
 
-import { Iconify } from 'src/components/iconify';
-
-// ----------------------------------------------------------------------
+// Regular expression for email validation
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export function SignInView() {
   const router = useRouter();
@@ -31,31 +33,47 @@ export function SignInView() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [formErrors, setFormErrors] = useState({
     email: '',
-    password: ''
+    password: '',
   });
+
+  // Load saved email from localStorage on mount if "Remember me" was checked
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('email');
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+  }, []);
+
+  // Persist email if "Remember me" is checked
+  useEffect(() => {
+    if (rememberMe) {
+      localStorage.setItem('email', email);
+    } else {
+      localStorage.removeItem('email');
+    }
+  }, [email, rememberMe]);
 
   const validateForm = () => {
     let isValid = true;
-    const errors = {
-      email: '',
-      password: ''
-    };
+    const errors = { email: '', password: '' };
 
     if (!email) {
-      errors.email = 'Veuillez saisir votre adresse email';
+      errors.email = 'L&apos;adresse email est requise';
       isValid = false;
-    } else if (!/\S+@\S+\.\S+/.test(email)) {
-      errors.email = 'Adresse email invalide';
+    } else if (!EMAIL_REGEX.test(email)) {
+      errors.email = 'Veuillez saisir une adresse email valide';
       isValid = false;
     }
 
     if (!password) {
-      errors.password = 'Veuillez saisir votre mot de passe';
+      errors.password = 'Le mot de passe est requis';
       isValid = false;
-    } else if (password.length < 6) {
-      errors.password = 'Le mot de passe doit contenir au moins 6 caractères';
+    } else if (password.length < 8) {
+      errors.password = 'Le mot de passe doit contenir au moins 8 caractères';
       isValid = false;
     }
 
@@ -63,19 +81,26 @@ export function SignInView() {
     return isValid;
   };
 
-  const handleSignIn = async (e: FormEvent) => {
+  const handleSignIn = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
-    
+
     setLoading(true);
     try {
       const result = await connexion(email, password);
       if (result.utilisateur) {
+        if (!rememberMe) {
+          localStorage.removeItem('email');
+        }
         router.push('/dashboard');
       }
     } catch (error) {
       console.error('Erreur de connexion:', error);
+      setFormErrors({
+        email: '',
+        password: 'Échec de la connexion. Vérifiez vos identifiants.',
+      });
     } finally {
       setLoading(false);
     }
@@ -85,17 +110,10 @@ export function SignInView() {
     <Box
       component="form"
       onSubmit={handleSignIn}
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        width: '100%',
-      }}
+      role="form"
+      sx={{ display: 'flex', flexDirection: 'column', width: '100%', gap: 3 }}
     >
-      {authError && (
-        <Alert severity="error" sx={{ mb: 3 }}>
-          {authError}
-        </Alert>
-      )}
+      {authError && <Alert severity="error">{authError}</Alert>}
 
       <TextField
         fullWidth
@@ -105,11 +123,9 @@ export function SignInView() {
         onChange={(e) => setEmail(e.target.value)}
         error={!!formErrors.email}
         helperText={formErrors.email}
-        sx={{ mb: 3 }}
         disabled={loading}
-        inputProps={{
-          autocomplete: 'username',
-        }}
+        autoFocus
+        inputProps={{ autoComplete: 'username', 'aria-label': 'Adresse email' }}
       />
 
       <TextField
@@ -125,23 +141,38 @@ export function SignInView() {
         InputProps={{
           endAdornment: (
             <InputAdornment position="end">
-              <IconButton 
-                onClick={() => setShowPassword(!showPassword)} 
+              <IconButton
+                onClick={() => setShowPassword(!showPassword)}
                 edge="end"
                 disabled={loading}
+                aria-label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
               >
-                <Iconify icon={showPassword ? 'solar:eye-bold' : 'solar:eye-closed-bold'} />
+                {showPassword ? <Visibility /> : <VisibilityOff />}
               </IconButton>
             </InputAdornment>
           ),
         }}
-        sx={{ mb: 2 }}
-        inputProps={{
-          autocomplete: 'current-password',
-        }}
+        inputProps={{ autoComplete: 'current-password', 'aria-label': 'Mot de passe' }}
       />
 
-      <Link href="/reset-password" variant="body2" color="inherit" sx={{ mb: 3, alignSelf: 'flex-end' }}>
+      <FormControlLabel
+        control={
+          <Checkbox
+            checked={rememberMe}
+            onChange={(e) => setRememberMe(e.target.checked)}
+            color="primary"
+          />
+        }
+        label="Se souvenir de moi"
+      />
+
+      <Link
+        href="/reset-password"
+        variant="body2"
+        color="inherit"
+        sx={{ alignSelf: 'flex-end', transition: 'color 0.2s' }}
+        underline="hover"
+      >
         Mot de passe oublié ?
       </Link>
 
@@ -151,93 +182,48 @@ export function SignInView() {
         type="submit"
         color="primary"
         variant="contained"
-        disabled={loading}
-        sx={{ 
-          py: 1.2,
+        disabled={loading || !!formErrors.email || !!formErrors.password}
+        sx={{
+          py: 1.5,
           fontSize: '1rem',
-          boxShadow: 2,
-          '&:hover': {
-            boxShadow: 4,
-          }
+          fontWeight: 'bold',
+          boxShadow: 3,
+          transition: 'all 0.3s',
+          '&:hover': { boxShadow: 6, transform: 'translateY(-2px)' },
         }}
       >
-        {loading ? (
-          <CircularProgress size={24} color="inherit" />
-        ) : (
-          'Se connecter'
-        )}
+        {loading ? <CircularProgress size={24} color="inherit" /> : 'Se connecter'}
       </Button>
     </Box>
   );
 
   return (
-    <Card sx={{ maxWidth: 480, mx: 'auto', boxShadow: 10, borderRadius: 2 }}>
-      <CardContent sx={{ p: 4 }}>
-        <Box
-          sx={{
-            gap: 1.5,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            mb: 4,
-          }}
-        >
-          <Box sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
-            <Iconify icon="mdi:desk-classroom" width={40} height={40} sx={{ color: 'primary.main', mr: 1 }} />
-            <Typography variant="h4" sx={{ color: 'primary.main', fontWeight: 'bold' }}>
-              Smart Salle
+      <Card sx={{ maxWidth: 480, width: '100%', boxShadow: { xs: 8, md: 12 }, borderRadius: 3, overflow: 'hidden' }}>
+        <CardContent sx={{ p: { xs: 3, md: 5 } }}>
+          <Box sx={{ gap: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', mb: 5 }}>
+            <Box sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
+              <School sx={{ fontSize: 48, color: 'primary.main', mr: 1.5 }} />
+              <Typography variant="h3" sx={{ color: 'primary.main', fontWeight: 'bold' }}>
+                Smart Salle
+              </Typography>
+            </Box>
+            <Typography variant="h5" sx={{ fontWeight: 'medium' }}>
+              Connexion
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center', maxWidth: 360 }}>
+              Bienvenue sur l&apos;application de gestion intelligente des salles de cours.
             </Typography>
           </Box>
-          
-          <Typography variant="h5" gutterBottom>Connexion</Typography>
-          
-          <Typography
-            variant="body2"
-            sx={{
-              color: 'text.secondary',
-              textAlign: 'center',
-            }}
-          >
-            Bienvenue sur l&apos;application de gestion intelligente des salles de cours.
-          </Typography>
-        </Box>
-        
-        {renderForm}
-        
-        <Box sx={{ mt: 3, textAlign: 'center' }}>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            Vous n&apos;avez pas de compte ?
-            <Link href="/register" variant="subtitle2" sx={{ ml: 0.5 }}>
-              Créer un compte
-            </Link>
-          </Typography>
-        </Box>
-        
-        <Divider sx={{ my: 3, '&::before, &::after': { borderTopStyle: 'dashed' } }}>
-          <Typography
-            variant="overline"
-            sx={{ color: 'text.secondary', fontWeight: 'fontWeightMedium' }}
-          >
-            INFORMATION
-          </Typography>
-        </Divider>
-        
-        <Box
-          sx={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: 1,
-          }}
-        >
-          <Typography variant="body2" color="text.secondary" textAlign="center">
-            Contrôlez les équipements et surveillez les conditions environnementales des salles en temps réel
-          </Typography>
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 2 }}>
-            © 2025 Faculté des Sciences - Projet Académique
-          </Typography>
-        </Box>
-      </CardContent>
-    </Card>
-  );
+
+          {renderForm}
+
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 2 }}>
+              © 2025 Faculté des Sciences - Projet Académique
+            </Typography>
+          </Box>
+        </CardContent>
+      </Card>
+  )
 }
