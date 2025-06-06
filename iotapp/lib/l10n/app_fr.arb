@@ -1,0 +1,22 @@
+{
+  "@@locale": "fr",
+  "appName": "Smart Salle",
+  "email": "Adresse e-mail",
+  "password": "Mot de passe",
+  "login": "Connexion",
+  "home": "Accueil",
+  "temperature": "Température",
+  "humidity": "Humidité",
+  "airQuality": "Qualité de l'air",
+  "airConditioner": "Climatiseur",
+  "projector": "Vidéo/projecteur",
+  "energySavingMode": "Mode économie d'énergie",
+  "smartSensors": "Capteurs intelligents",
+  "notifications": "Notifications",
+  "pleaseEnterEmail": "Veuillez entrer votre adresse e-mail",
+  "pleaseEnterPassword": "Veuillez entrer votre mot de passe",
+  "loginSuccess": "Connexion réussie",
+  "loginFailed": "Échec de la connexion",
+  "error": "Erreur",
+  "unexpectedError": "Une erreur inattendue est survenue"
+}
